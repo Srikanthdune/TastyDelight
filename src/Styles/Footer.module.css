@@ -1,0 +1,85 @@
+.footer {
+  background-color: #111827;
+  color: #e5e7eb;
+  padding: 3rem 1rem 1.5rem;
+  margin-top: 0;    /* ✅ was probably 3rem — change to 0 */
+}
+
+
+.brand {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+.text {
+  color: #d1d5db;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.heading {
+  color: #f9fafb;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.links li {
+  margin-bottom: 0.5rem;
+}
+
+.links a {
+  color: #d1d5db;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.links a:hover {
+  color: #0b7aff;
+}
+
+.socialIcons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.socialIcons a {
+  color: #e5e7eb;
+  font-size: 1.3rem;
+  transition: color 0.2s ease;
+}
+
+.socialIcons a:hover {
+  color: #0b7aff;
+}
+
+.divider {
+  border-color: #1f2937;
+  margin: 1.5rem 0;
+}
+
+.copy {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .footer {
+    text-align: center;
+  }
+  
+  .socialIcons {
+    justify-content: center;
+  }
+}

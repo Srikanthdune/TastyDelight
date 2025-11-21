@@ -1,0 +1,23 @@
+/* Add horizontal padding of 40px to the header */
+.navbar-container {
+  padding-left: 40px !important;
+  padding-right: 40px !important;
+}
+
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+.custom-navbar {
+  padding-right: 40px !important;
+  padding-left: 40px !important;
+}
+
+.small-login-btn {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 8px;
+}

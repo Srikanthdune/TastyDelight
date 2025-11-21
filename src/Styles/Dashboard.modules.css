@@ -1,0 +1,63 @@
+/* ENTIRE WRAPPER */
+.admin-wrapper {
+  height: 100vh;
+  overflow: hidden;
+  background: #f7f7f7;
+}
+
+/* SIDEBAR */
+.admin-sidebar {
+  background: #1f1f1f;
+  height: 100vh;
+  color: white;
+  padding: 20px;
+  position: fixed;
+  width: 16.6%;
+}
+
+.sidebar-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 25px;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+}
+
+.menu-item {
+  padding: 12px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  transition: 0.3s;
+}
+
+.menu-item:hover {
+  background: #343434;
+}
+
+/* RIGHT SIDE CONTENT */
+.admin-content {
+  margin-left: 16.6%;
+  padding: 25px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* DASHBOARD CARDS */
+.admin-card {
+  border-radius: 12px;
+  transition: 0.3s;
+  background: white;
+}
+
+.admin-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0px 4px 18px rgba(0, 0, 0, 0.2);
+}
+
+.card-title {
+  color: #333;
+}

@@ -1,0 +1,29 @@
+.coupon-card-full {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.coupon-title {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.coupon-desc {
+  font-size: 14px;
+  color: #555;
+}
+
+.coupon-code-box {
+  background: #000;
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 6px;
+  margin-top: 5px;
+}
+
+.coupon-code {
+  color: white;
+  font-weight: bold;
+}

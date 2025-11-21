@@ -1,0 +1,8 @@
+button.btn-link {
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+button.btn-link:hover {
+  text-decoration: underline !important;
+}

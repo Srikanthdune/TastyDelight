@@ -1,0 +1,75 @@
+.aboutSection {
+  background-color: #fff;
+  padding: 4rem 1rem;
+}
+
+.textCol {
+  padding-right: 2rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #111827;
+}
+
+.description {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+.learnMoreBtn {
+  background: linear-gradient(180deg, #0b7aff, #095adf);
+  border: none;
+  padding: 10px 20px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.learnMoreBtn:hover {
+  background: linear-gradient(180deg, #095adf, #074abf);
+}
+
+/* Right side image */
+.imageCol {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.aboutImage {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .aboutSection {
+    padding: 2.5rem 1rem;
+  }
+
+  .textCol {
+    padding-right: 0;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .title {
+    font-size: 1.6rem;
+  }
+  .aboutSection {
+  background-color: #fff;
+  padding: 4rem 1rem 2rem;  /* ✅ reduced bottom padding */
+  margin-bottom: 0;         /* ✅ remove extra gap below */
+}
+
+  .aboutImage {
+    max-width: 100%;
+  }
+}

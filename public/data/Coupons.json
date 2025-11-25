@@ -1,0 +1,52 @@
+[
+  {
+    "id": "c_welcome",
+    "title": "Welcome Coupon",
+    "code": "WELCOME50",
+    "description": "Get flat ₹50 OFF on your first order!",
+    "discount": 50,
+    "type": "flat",
+    "minTotal": 0,
+    "active": true
+  },
+  {
+    "id": "c_save500",
+    "title": "₹500+ Purchase Coupon",
+    "code": "SAVE500",
+    "description": "Save ₹75 when your order is above ₹500.",
+    "discount": 75,
+    "type": "flat",
+    "minTotal": 500,
+    "active": true
+  },
+  {
+    "id": "c_ten_off",
+    "title": "Flat Ten Demo",
+    "code": "TENOFF",
+    "description": "Demo coupon — flat ₹10 off.",
+    "discount": 10,
+    "type": "flat",
+    "minTotal": 0,
+    "active": true
+  },
+  {
+    "id": "c_festive",
+    "title": "Festive Season Offer",
+    "code": "FESTIVE30",
+    "description": "Enjoy 30% off during festive season.",
+    "discount": 30,
+    "type": "percent",
+    "minTotal": 0,
+    "active": true
+  },
+  {
+    "id": "c_biryani",
+    "title": "Biryani Lover Offer",
+    "code": "BIRYANI20",
+    "description": "20% off on biryani orders above ₹199.",
+    "discount": 20,
+    "type": "percent",
+    "minTotal": 199,
+    "active": true
+  }
+]

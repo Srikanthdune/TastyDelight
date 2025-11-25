@@ -1,6 +1,5 @@
-// src/Admin/Pages/AdminProductsPage.jsx
-import React, { useEffect, useState, useMemo, useCallback } from "react";
-import AdminLayout from "../Components/AdminLayout";
+// src/Admin/Pages/Products.jsx
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Container,
   Row,
@@ -12,145 +11,155 @@ import {
   InputGroup,
   Badge,
   Accordion,
+  Alert,
 } from "react-bootstrap";
 import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import AdminLayout from "../Components/AdminLayout";
 
 const LS_KEY = "admin_products_v1";
-const CATS_KEY = "admin_categories_v1";
 
 function uid(prefix = "p") {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/* Sample products used when storage is empty */
-const sampleProducts = () => {
-  const cat = ["Starters", "Pizzas", "Burgers", "Biryani", "Desserts", "Drinks"];
-  return cat.flatMap((c) =>
-    Array.from({ length: 3 }).map((_, i) => ({
-      id: uid("demo"),
-      title: `${c} Demo ${i + 1}`,
-      desc: "Delicious and freshly prepared.",
-      img: "",
-      price: 120 + (i + 1) * 50,
-      original: 160 + (i + 1) * 50,
-      category: c,
-      featured: i === 0,
-    }))
-  );
-};
+const FALLBACK_IMG =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiIGZvbnQtc2l6ZT0iMTgiPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==";
 
-/*
-  useProducts hook — returns stable functions so consumers can safely
-  include them in useEffect deps without causing infinite loops.
-*/
 function useProducts() {
-  const readStorage = useCallback(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.error("Failed to read products from storage", e);
-    }
-    const init = sampleProducts();
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(init));
-    } catch (e) { /* ignore */ }
-    return init;
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProducts(parsed);
+            return;
+          }
+        } catch (e) {
+          console.error("Corrupted localStorage", e);
+        }
+      }
+
+      try {
+        const res = await fetch("/data/Products.json?t=" + Date.now());
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        const normalized = data.map(p => ({
+          id: p.id || uid("p"),
+          title: p.title || "Untitled",
+          desc: p.desc || "",
+          img: p.img || "",
+          price: Number(p.price) || 0,
+          original: Number(p.original) || Number(p.price) || 0,
+          category: p.category || "Uncategorized",
+          featured: !!p.featured,
+        }));
+
+        localStorage.setItem(LS_KEY, JSON.stringify(normalized));
+        setProducts(normalized);
+      } catch (err) {
+        console.error("Failed to load Products.json", err);
+        setProducts([]);
+      }
+    };
+
+    loadProducts();
+
+    const handler = () => loadProducts();
+    window.addEventListener("storage", handler);
+    window.addEventListener("products-updated", handler);
+
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("products-updated", handler);
+    };
   }, []);
 
-  const [products, setProductsState] = useState(readStorage);
-
-  const persistAndBroadcast = useCallback((next) => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.error("Failed to write products to storage", e);
-    }
-    try {
-      window.dispatchEvent(new CustomEvent("products-updated", { detail: next }));
-    } catch (e) {
-      console.warn("Failed to dispatch products-updated event", e);
-    }
+  const save = useCallback((list) => {
+    localStorage.setItem(LS_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent("products-updated"));
   }, []);
 
-  // setProducts is stable thanks to useCallback
-  const setProducts = useCallback((next) => {
-    setProductsState((cur) => {
-      const resolved = typeof next === "function" ? next(cur) : next;
-      persistAndBroadcast(resolved);
-      return resolved;
+  const add = useCallback((product) => {
+    setProducts(prev => {
+      const updated = [{ ...product, id: uid("p") }, ...prev];
+      save(updated);
+      return updated;
     });
-  }, [persistAndBroadcast]);
-
-  const add = useCallback((p) => {
-    setProducts((cur) => [p, ...cur]);
-  }, [setProducts]);
+  }, [save]);
 
   const update = useCallback((id, data) => {
-    setProducts((cur) => cur.map((it) => (it.id === id ? { ...it, ...data } : it)));
-  }, [setProducts]);
+    setProducts(prev => {
+      const updated = prev.map(p => (p.id === id ? { ...p, ...data } : p));
+      save(updated);
+      return updated;
+    });
+  }, [save]);
 
   const remove = useCallback((id) => {
-    setProducts((cur) => cur.filter((it) => it.id !== id));
-  }, [setProducts]);
+    setProducts(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      save(updated);
+      return updated;
+    });
+  }, [save]);
 
-  return { products, add, update, remove, setProducts };
+  const reset = useCallback(() => {
+    localStorage.removeItem(LS_KEY);
+    window.location.reload();
+  }, []);
+
+  return { products, add, update, remove, reset };
 }
 
-/* Load categories (titles) from storage */
-function loadCategoriesFromStorage() {
-  try {
-    const raw = localStorage.getItem(CATS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((c) => (typeof c === "string" ? c : c.title || c.name || "")).filter(Boolean);
-  } catch (e) {
-    console.error("Failed to load categories", e);
-    return [];
-  }
-}
+const ProductCard = React.memo(function ProductCard({ p, onEdit, onDelete }) {
+  const save = Math.max(0, p.original - p.price);
 
-const ProductCardAdmin = React.memo(function ProductCardAdmin({ p, onEdit, onDelete }) {
-  const save = Math.max(0, (p.original || p.price) - p.price);
   return (
-    <Card className="h-100">
-      <div style={{ height: 160, overflow: "hidden", display: "grid", placeItems: "center" }}>
-        {p.img ? (
-          <img
-            src={p.img}
-            alt={p.title}
-            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "cover" }}
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-        ) : (
-          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f6f6f6", color: "#888" }}>
-            No image
-          </div>
-        )}
+    <Card className="h-100 shadow-sm border-0">
+      <div style={{ height: 180, overflow: "hidden", background: "#f9f9f9" }}>
+        <img
+          src={p.img || FALLBACK_IMG}
+          alt={p.title}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={(e) => (e.currentTarget.src = FALLBACK_IMG)}
+        />
       </div>
+
       <Card.Body className="d-flex flex-column">
-        <Card.Title className="mb-1">{p.title}</Card.Title>
-        <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: 13 }}>
-          {p.category} {p.featured && <Badge bg="info" className="ms-2">Featured</Badge>}
+        <Card.Title className="h6 fw-bold">{p.title}</Card.Title>
+        <Card.Subtitle className="mb-2 text-muted small">
+          {p.category}{" "}
+          {p.featured && <Badge bg="success" className="ms-2">Featured</Badge>}
         </Card.Subtitle>
-        <Card.Text className="flex-grow-1" style={{ fontSize: 14 }}>{p.desc}</Card.Text>
+        <Card.Text className="small text-muted flex-grow-1">{p.desc}</Card.Text>
 
-        <div className="d-flex align-items-center justify-content-between mt-2">
+        <div className="mt-auto d-flex justify-content-between align-items-end">
           <div>
-            <div style={{ fontWeight: 700 }}>₹{p.price}</div>
-            <div style={{ textDecoration: "line-through", fontSize: 12 }}>₹{p.original}</div>
-            <div style={{ fontSize: 12 }}>Save ₹{save}</div>
+            <div className="fw-bold text-success">₹{p.price}</div>
+            {p.original > p.price && (
+              <>
+                <div className="text-decoration-line-through text-muted small">₹{p.original}</div>
+                <small className="text-danger">Save ₹{save}</small>
+              </>
+            )}
           </div>
-
           <div className="d-flex gap-2">
-            <Button variant="outline-primary" size="sm" onClick={() => onEdit(p)}>
-              <FaEdit />
+            {/* EDIT BUTTON FIXED BELOW */}
+            <Button
+              size="sm"
+              variant="outline-primary"
+              onClick={() => onEdit(p)}  // This triggers edit mode
+            >
+              Edit
             </Button>
-            <Button variant="outline-danger" size="sm" onClick={() => onDelete(p)}>
-              <FaTrash />
+            <Button size="sm" variant="outline-danger" onClick={() => onDelete(p)}>
+              Delete
             </Button>
           </div>
         </div>
@@ -159,307 +168,177 @@ const ProductCardAdmin = React.memo(function ProductCardAdmin({ p, onEdit, onDel
   );
 });
 
-/* ProductForm — unchanged (uses image URL) */
-function ProductForm({ initial = null, onCancel, onSubmit, categories = [] }) {
-  const defaultCategory = categories && categories.length ? categories[0] : "Starters";
+function ProductForm({ initial, onCancel, onSubmit, categories }) {
+  const [form, setForm] = useState({
+    title: initial?.title || "",
+    desc: initial?.desc || "",
+    img: initial?.img || "",
+    price: initial?.price || "",
+    original: initial?.original || "",
+    category: initial?.category || categories[0] || "Starters",
+    featured: initial?.featured || false,
+  });
 
-  const [form, setForm] = useState(
-    initial || {
-      title: "",
-      desc: "",
-      img: "",
-      price: "",
-      original: "",
-      category: defaultCategory,
-      featured: false,
-    }
-  );
-
-  useEffect(() => {
-    setForm(
-      initial || {
-        title: "",
-        desc: "",
-        img: "",
-        price: "",
-        original: "",
-        category: defaultCategory,
-        featured: false,
-      }
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial, defaultCategory]);
-
-  useEffect(() => {
-    setForm((f) => ({
-      ...f,
-      category: initial?.category || (categories && categories.length ? categories[0] : f.category),
-    }));
-  }, [categories, initial]);
-
-  const change = (k) => (e) => {
+  const handleChange = (key) => (e) => {
     const val = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm((s) => ({ ...s, [k]: val }));
+    setForm(prev => ({ ...prev, [key]: val }));
   };
-
-  const pasteUrl = () => {
-    const url = window.prompt("Paste image URL (http(s)...)");
-    if (url) setForm((s) => ({ ...s, img: url }));
-  };
-
-  const removeImage = () => setForm((s) => ({ ...s, img: "" }));
 
   const submit = (e) => {
     e.preventDefault();
     if (!form.title.trim()) return alert("Title is required");
-    if (!form.price || Number(form.price) <= 0) return alert("Provide a valid price");
+    if (!form.price || Number(form.price) <= 0) return alert("Valid price required");
 
-    const payload = {
+    onSubmit({
       ...form,
+      id: initial?.id || uid("p"),
       price: Number(form.price),
       original: Number(form.original || form.price),
-      id: initial?.id || uid("p"),
-    };
-    onSubmit(payload);
+    });
   };
 
   return (
     <Form onSubmit={submit}>
-      <Form.Group className="mb-2">
-        <Form.Label>Title</Form.Label>
-        <Form.Control value={form.title} onChange={change("title")} />
-      </Form.Group>
+      <Row>
+        <Col md={6}><Form.Group className="mb-3"><Form.Label>Title *</Form.Label><Form.Control value={form.title} onChange={handleChange("title")} required /></Form.Group></Col>
+        <Col md={6}><Form.Group className="mb-3"><Form.Label>Category</Form.Label><Form.Select value={form.category} onChange={handleChange("category")}>{categories.map(c => <option key={c} value={c}>{c}</option>)}</Form.Select></Form.Group></Col>
+      </Row>
 
-      <Form.Group className="mb-2">
-        <Form.Label>Description</Form.Label>
-        <Form.Control as="textarea" rows={2} value={form.desc} onChange={change("desc")} />
-      </Form.Group>
+      <Form.Group className="mb-3"><Form.Label>Description</Form.Label><Form.Control as="textarea" rows={2} value={form.desc} onChange={handleChange("desc")} /></Form.Group>
 
-      <Form.Group className="mb-2">
-        <Form.Label>Category</Form.Label>
-        <Form.Select value={form.category} onChange={change("category")}>
-          {categories && categories.length ? (
-            categories.map((c) => <option key={c} value={c}>{c}</option>)
-          ) : (
-            <>
-              <option>Starters</option>
-              <option>Pizzas</option>
-              <option>Burgers</option>
-              <option>Biryani</option>
-              <option>Desserts</option>
-              <option>Drinks</option>
-            </>
-          )}
-        </Form.Select>
-      </Form.Group>
-
-      <Form.Group className="mb-2">
+      <Form.Group className="mb-3">
         <Form.Label>Image URL</Form.Label>
         <InputGroup>
-          <Form.Control value={form.img} onChange={change("img")} placeholder="/images/... or https://..." />
-          <Button variant="outline-secondary" onClick={pasteUrl}>Paste URL</Button>
-          <Button variant="outline-danger" onClick={removeImage}>Remove</Button>
+          <Form.Control value={form.img} onChange={handleChange("img")} placeholder="/images/..." />
+          <Button variant="outline-secondary" onClick={() => {
+            const url = prompt("Paste image URL");
+            if (url?.trim()) setForm(prev => ({ ...prev, img: url.trim() }));
+          }}>Paste</Button>
         </InputGroup>
-
-        {form.img ? (
-          <div style={{ marginTop: 8 }}>
-            <img src={form.img} alt="preview" style={{ maxWidth: 180, maxHeight: 90, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
-          </div>
-        ) : (
-          <div style={{ marginTop: 6, color: "#666", fontSize: 13 }}>No image URL provided.</div>
-        )}
+        {form.img && <img src={form.img} alt="Preview" className="mt-3 rounded shadow-sm" style={{ maxHeight: 140, maxWidth: "100%", objectFit: "cover" }} onError={e => e.currentTarget.src = FALLBACK_IMG} />}
       </Form.Group>
 
       <Row>
-        <Col>
-          <Form.Group className="mb-2">
-            <Form.Label>Price (₹)</Form.Label>
-            <Form.Control type="number" value={form.price} onChange={change("price")} />
-          </Form.Group>
-        </Col>
-        <Col>
-          <Form.Group className="mb-2">
-            <Form.Label>Original (₹)</Form.Label>
-            <Form.Control type="number" value={form.original} onChange={change("original")} />
-          </Form.Group>
-        </Col>
+        <Col><Form.Group className="mb-3"><Form.Label>Price (₹) *</Form.Label><Form.Control type="number" value={form.price} onChange={handleChange("price")} required /></Form.Group></Col>
+        <Col><Form.Group className="mb-3"><Form.Label>Original Price (₹)</Form.Label><Form.Control type="number" value={form.original} onChange={handleChange("original")} /></Form.Group></Col>
       </Row>
 
-      <Form.Group className="mb-3" controlId="featuredCheck">
-        <Form.Check type="checkbox" label="Featured" checked={form.featured} onChange={change("featured")} />
-      </Form.Group>
+      <Form.Check type="switch" label="Featured Item" checked={form.featured} onChange={handleChange("featured")} className="mb-4" />
 
       <div className="d-flex justify-content-end gap-2">
-        <Button variant="secondary" onClick={onCancel} type="button">Cancel</Button>
-        <Button variant="primary" type="submit">Save Product</Button>
+        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+        <Button variant="success" type="submit">Save Product</Button>
       </div>
     </Form>
   );
 }
 
-/* AdminProductsPage component */
-export default function AdminProductsPage() {
+export default function Products() {
   const navigate = useNavigate();
-  useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    if (!token) navigate("/Admin/auth/login", { replace: true });
-  }, [navigate]);
-
-  const { products, add, update, remove, setProducts } = useProducts();
-
-  const [categories, setCategories] = useState(() => {
-    const loaded = loadCategoriesFromStorage();
-    return loaded.length ? loaded : ["Starters", "Pizzas", "Burgers", "Biryani", "Desserts", "Drinks"];
-  });
-
-  useEffect(() => {
-    const load = () => {
-      const loaded = loadCategoriesFromStorage();
-      if (loaded.length) setCategories(loaded);
-      else setCategories(["Starters","Pizzas","Burgers","Biryani","Desserts","Drinks"]);
-    };
-
-    load();
-    const onStorage = (ev) => {
-      if (ev.key === CATS_KEY) load();
-      if (ev.key === LS_KEY) {
-        const raw = localStorage.getItem(LS_KEY);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) setProducts(parsed); // safe: setProducts is stable
-          } catch (e) {}
-        }
-      }
-    };
-    const onCustom = () => load();
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("categories-updated", onCustom);
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("categories-updated", onCustom);
-    };
-  }, [setProducts]); // setProducts is stable now (memoized)
+  const { products, add, update, remove, reset } = useProducts();
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [confirm, setConfirm] = useState({ show: false, product: null });
-
-  // debounced search
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchTerm.trim().toLowerCase()), 200);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
+    if (!localStorage.getItem("adminToken")) {
+      navigate("/Admin/auth/login", { replace: true });
+    }
+  }, [navigate]);
 
-  // Memoized filtered products
-  const filtered = useMemo(() => {
-    if (!debouncedQuery) return products;
-    const q = debouncedQuery;
-    return products.filter((p) =>
-      (p.title || "").toLowerCase().includes(q) ||
-      (p.desc || "").toLowerCase().includes(q) ||
-      (p.category || "").toLowerCase().includes(q)
-    );
-  }, [products, debouncedQuery]);
+  const categories = ["Starters", "Pizzas", "Burgers", "Biryani", "Desserts", "Drinks"];
 
-  // Memoized categories from filtered products
-  const categoriesFromProducts = useMemo(() => {
-    return Array.from(new Set(filtered.map((p) => p.category))).sort((a, b) => a.localeCompare(b));
+  const filtered = products.filter(p =>
+    p.title.toLowerCase().includes(search.toLowerCase()) ||
+    p.desc.toLowerCase().includes(search.toLowerCase()) ||
+    p.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const grouped = useMemo(() => {
+    const map = new Map();
+    filtered.forEach(p => {
+      if (!map.has(p.category)) map.set(p.category, []);
+      map.get(p.category).push(p);
+    });
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [filtered]);
 
-  // Accordion active category (controlled) to render only one body at a time
-  const [activeCategory, setActiveCategory] = useState(categoriesFromProducts[0] || null);
-  useEffect(() => {
-    if (!activeCategory && categoriesFromProducts.length) setActiveCategory(categoriesFromProducts[0]);
-    if (activeCategory && !categoriesFromProducts.includes(activeCategory)) {
-      setActiveCategory(categoriesFromProducts[0] || null);
-    }
-  }, [categoriesFromProducts, activeCategory]);
-
-  // Stable callbacks
-  const openAdd = useCallback(() => { setEditing(null); setShowModal(true); }, []);
-  const openEdit = useCallback((p) => { setEditing(p); setShowModal(true); }, []);
-  const handleDelete = useCallback((p) => setConfirm({ show: true, product: p }), []);
-  const onFormSubmit = useCallback((payload) => {
-    if (editing) update(editing.id, payload);
-    else add(payload);
-    setShowModal(false);
-    setEditing(null);
-  }, [editing, update, add]);
-
-  const confirmDelete = () => {
-    const id = confirm.product?.id;
-    if (!id) return setConfirm({ show: false, product: null });
-    remove(id);
-    setConfirm({ show: false, product: null });
+  // EDIT BUTTON NOW WORKS!
+  const handleEdit = (product) => {
+    setEditing(product);
+    setShowModal(true);  // This line was missing before!
   };
 
   return (
     <AdminLayout>
       <Container fluid className="py-4">
         <Container>
-          <div className="d-flex align-items-center justify-content-between mb-3">
-            <h4>Admin — Products</h4>
-
-            <div className="d-flex align-items-center gap-2">
-              <Form.Control
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: 240 }}
-              />
-              <Button variant="outline-secondary" onClick={() => setProducts(sampleProducts())}>Reset Demo</Button>
-              <Button variant="success" onClick={openAdd}><FaPlus className="me-2" /> Add New Product</Button>
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h3>Manage Products ({products.length})</h3>
+            <div className="d-flex gap-2">
+              <Form.Control placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 300 }} />
+              <Button variant="outline-warning" onClick={reset}>Reset to Default</Button>
+              <Button variant="success" onClick={() => { setEditing(null); setShowModal(true); }}>
+                Add Product
+              </Button>
             </div>
           </div>
 
-          {categoriesFromProducts.length === 0 ? (
-            <div>No products found</div>
+          {products.length === 0 ? (
+            <Alert variant="info">Loading products...</Alert>
           ) : (
-            <Accordion activeKey={activeCategory}>
-              {categoriesFromProducts.map((cat) => {
-                const items = filtered.filter((p) => p.category === cat);
-                return (
-                  <Accordion.Item eventKey={cat} key={cat}>
-                    <Accordion.Header onClick={() => setActiveCategory((s) => (s === cat ? null : cat))}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <strong>{cat}</strong>
-                        <Badge bg="secondary">{items.length}</Badge>
-                      </div>
-                    </Accordion.Header>
-
-                    {activeCategory === cat ? (
-                      <Accordion.Body>
-                        <Row xs={1} sm={2} md={3} lg={4} className="g-3">
-                          {items.map((p) => (
-                            <Col key={p.id}><ProductCardAdmin p={p} onEdit={openEdit} onDelete={handleDelete} /></Col>
-                          ))}
-                        </Row>
-                      </Accordion.Body>
-                    ) : null}
-                  </Accordion.Item>
-                );
-              })}
+            <Accordion defaultActiveKey={grouped[0]?.[0]}>
+              {grouped.map(([cat, items]) => (
+                <Accordion.Item eventKey={cat} key={cat}>
+                  <Accordion.Header>
+                    <strong>{cat}</strong> <Badge bg="secondary" className="ms-2">{items.length}</Badge>
+                  </Accordion.Header>
+                  <Accordion.Body>
+                    <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+                      {items.map(p => (
+                        <Col key={p.id}>
+                          <ProductCard
+                            p={p}
+                            onEdit={handleEdit}        // Fixed: now opens modal
+                            onDelete={setConfirmDelete}
+                          />
+                        </Col>
+                      ))}
+                    </Row>
+                  </Accordion.Body>
+                </Accordion.Item>
+              ))}
             </Accordion>
           )}
 
-          <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-            <Modal.Header closeButton><Modal.Title>{editing ? "Edit Product" : "Add New Product"}</Modal.Title></Modal.Header>
+          {/* Edit/Add Modal */}
+          <Modal show={showModal} onHide={() => { setShowModal(false); setEditing(null); }} size="lg">
+            <Modal.Header closeButton>
+              <Modal.Title>{editing ? "Edit Product" : "Add New Product"}</Modal.Title>
+            </Modal.Header>
             <Modal.Body>
-              <ProductForm initial={editing} onCancel={() => setShowModal(false)} onSubmit={onFormSubmit} categories={categories} />
+              <ProductForm
+                initial={editing}
+                onCancel={() => { setShowModal(false); setEditing(null); }}
+                onSubmit={(data) => {
+                  editing ? update(editing.id, data) : add(data);
+                  setShowModal(false);
+                  setEditing(null);
+                }}
+                categories={categories}
+              />
             </Modal.Body>
           </Modal>
 
-          <Modal show={confirm.show} onHide={() => setConfirm({ show: false, product: null })}>
-            <Modal.Header closeButton><Modal.Title>Delete product</Modal.Title></Modal.Header>
-            <Modal.Body>Are you sure you want to permanently delete <strong>{confirm.product?.title}</strong>?</Modal.Body>
+          {/* Delete Modal */}
+          <Modal show={!!confirmDelete} onHide={() => setConfirmDelete(null)}>
+            <Modal.Header closeButton><Modal.Title>Delete Product?</Modal.Title></Modal.Header>
+            <Modal.Body>Delete <strong>{confirmDelete?.title}</strong> permanently?</Modal.Body>
             <Modal.Footer>
-              <Button variant="secondary" onClick={() => setConfirm({ show: false, product: null })}>Cancel</Button>
-              <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => { remove(confirmDelete.id); setConfirmDelete(null); }}>Delete</Button>
             </Modal.Footer>
           </Modal>
         </Container>

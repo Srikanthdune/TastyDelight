@@ -71,10 +71,20 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform .35s ease;
+  transition: transform .35s ease, opacity .22s ease;
+  opacity: 0;
 }
 .productCard:hover .cardImg {
   transform: scale(1.06);
+}
+
+/* loaded / loading helper classes used by the component */
+.loaded {
+  opacity: 1 !important;
+  filter: none !important;
+}
+.loading {
+  filter: blur(0.6px);
 }
 
 /* text */

@@ -119,20 +119,20 @@ export default function Categories() {
           </Form>
         </div>
 
-        <Row className={`g-4 justify-content-center ${styles.grid3x3}`}>
+        <Row className={`g-4 justify-content-center ${styles.gridCircles}`}>
           {filtered.length === 0 ? (
             <div style={{ padding: 24, color: "#666" }}>No categories found</div>
           ) : (
             filtered.map((cat) => {
               const slug = slugify(cat.title);
               return (
-                <Col key={cat.id} xs={12} sm={6} md={4} lg={4}>
+                <Col key={cat.id} xs={6} sm={4} md={3} lg={2} className="d-flex justify-content-center">
                   <Link
                     to={`/category/${encodeURIComponent(slug)}`}
                     className={styles.linkWrapper}
                     style={{ textDecoration: "none" }}
                   >
-                    <Card className={styles.card}>
+                    <Card className={styles.circleCard}>
                       <div className={styles.imgWrap}>
                         <Card.Img
                           src={cat.image || `/images/${cat.title.toLowerCase()}.jpg`}
@@ -140,16 +140,13 @@ export default function Categories() {
                           className={styles.cardImg}
                           loading="lazy"
                           onError={(e) => {
-                            // hide broken image (optional)
                             e.currentTarget.style.display = "none";
                           }}
                         />
                       </div>
 
-                      <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start">
-                          <Card.Title className={styles.name}>{cat.title}</Card.Title>
-                        </div>
+                      <Card.Body className={styles.cardBody}>
+                        <Card.Title className={styles.name}>{cat.title}</Card.Title>
                       </Card.Body>
                     </Card>
                   </Link>

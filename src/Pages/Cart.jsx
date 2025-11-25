@@ -5,6 +5,7 @@ import { FaArrowLeft, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Header from "../Components/Header";
 import "../Styles/Cart.modules.css";
+import { applyCoupon as applyCouponHelper } from "../Admin/Pages/Coupons"; // <- uses exported helper
 
 const CART_KEY = "cart";
 const CART_COUPON_KEY = "cart_applied_coupon";
@@ -31,25 +32,31 @@ function ensureDefaultCoupons() {
       id: `cp_${Math.random().toString(36).slice(2, 9)}`,
       title: "Welcome Coupon",
       code: "WELCOME50",
-      description: "Get flat ₹50 OFF on your first order!",
+      description: "Get flat 50 OFF on your first order!",
       discount: 50,
+      type: "flat",
       minTotal: 0,
+      active: true,
     },
     {
       id: `cp_${Math.random().toString(36).slice(2, 9)}`,
       title: "₹500+ Purchase Coupon",
       code: "SAVE500",
-      description: "Save ₹75 when your order is above ₹500.",
+      description: "Save 75 when your order is above 500.",
       discount: 75,
+      type: "flat",
       minTotal: 500,
+      active: true,
     },
     {
       id: `cp_${Math.random().toString(36).slice(2, 9)}`,
       title: "10 OFF Demo",
       code: "TENOFF",
-      description: "Demo flat ₹10 off.",
+      description: "Demo flat 10 off.",
       discount: 10,
+      type: "flat",
       minTotal: 0,
+      active: true,
     },
   ];
 
@@ -71,12 +78,15 @@ export default function Cart() {
   ]);
   const [selectedCoupon, setSelectedCoupon] = useState("NONE");
 
+  // appliedCoupon stored shape:
+  // - previous code used { code, discount }
+  // - with new helper we store { code, amount }
   const [appliedCoupon, setAppliedCoupon] = useState(() => {
     try {
       const raw = localStorage.getItem(CART_COUPON_KEY);
-      return raw ? JSON.parse(raw) : { code: "NONE", discount: 0 };
+      return raw ? JSON.parse(raw) : { code: "NONE", amount: 0 };
     } catch {
-      return { code: "NONE", discount: 0 };
+      return { code: "NONE", amount: 0 };
     }
   });
 
@@ -136,7 +146,9 @@ export default function Cart() {
             code: code || "",
             label: c && c.title ? `${c.title} (${code})` : code || "",
             discount: Number((c && c.discount) || 0) || 0,
-            minTotal: Number((c && c.minTotal) || 0) || 0,
+            minTotal: Number((c && c.minTotal) || c.minTotal || 0) || 0,
+            type: (c && c.type) || "flat",
+            active: typeof c.active === "boolean" ? c.active : true,
           };
         });
 
@@ -149,14 +161,20 @@ export default function Cart() {
         setCoupons([{ code: "NONE", label: "Select a coupon...", discount: 0 }, ...unique]);
 
         const rawApplied = localStorage.getItem(CART_COUPON_KEY);
-        const applied = rawApplied ? JSON.parse(rawApplied) : { code: "NONE", discount: 0 };
+        let applied = rawApplied ? JSON.parse(rawApplied) : { code: "NONE", amount: 0 };
+
+        // legacy support: if stored applied had 'discount' field, convert to amount
+        if (applied && applied.discount !== undefined && applied.amount === undefined) {
+          applied = { code: applied.code || "NONE", amount: Number(applied.discount || 0) };
+        }
+
         setAppliedCoupon(applied);
         setSelectedCoupon(applied?.code || "NONE");
       } catch (err) {
         console.error("Failed to load coupons", err);
         setCoupons([{ code: "NONE", label: "Select a coupon...", discount: 0 }]);
         setSelectedCoupon("NONE");
-        setAppliedCoupon({ code: "NONE", discount: 0 });
+        setAppliedCoupon({ code: "NONE", amount: 0 });
       }
     };
 
@@ -207,13 +225,28 @@ export default function Cart() {
     [cart]
   );
 
-  const appliedDiscount = appliedCoupon?.discount || 0;
-  const total = Math.max(0, subtotal - appliedDiscount);
+  // derive discount & new total using applyCouponHelper for correctness
+  const couponResult = useMemo(() => {
+    if (!appliedCoupon || !appliedCoupon.code || appliedCoupon.code === "NONE") {
+      return { success: false, amount: 0, newTotal: subtotal, message: "" };
+    }
+    try {
+      // applyCouponHelper returns { success, amount, newTotal, message, coupon }
+      return applyCouponHelper(appliedCoupon.code, subtotal);
+    } catch (e) {
+      console.error("coupon apply error", e);
+      return { success: false, amount: appliedCoupon.amount || 0, newTotal: Math.max(0, subtotal - (appliedCoupon.amount || 0)), message: "" };
+    }
+  }, [appliedCoupon, subtotal]);
+
+  const appliedDiscount = couponResult?.amount || 0;
+  const total = couponResult?.newTotal ?? Math.max(0, subtotal - appliedDiscount);
 
   /* -------------------- APPLY / CLEAR COUPON -------------------- */
   const applyCoupon = () => {
     if (selectedCoupon === "NONE") {
-      const cleared = { code: "NONE", discount: 0 };
+      // Clear
+      const cleared = { code: "NONE", amount: 0 };
       setAppliedCoupon(cleared);
       try {
         localStorage.setItem(CART_COUPON_KEY, JSON.stringify(cleared));
@@ -233,19 +266,26 @@ export default function Cart() {
     }
 
     if (found.minTotal && subtotal < found.minTotal) {
-      alert(`Requires minimum subtotal ₹${found.minTotal}.`);
+      alert(`Requires minimum subtotal &#8377;${found.minTotal}.`);
       return;
     }
 
-    const apply = { code: found.code, discount: found.discount };
-    setAppliedCoupon(apply);
+    // Use the shared helper to compute correct amount
+    const res = applyCouponHelper(found.code, subtotal);
+    if (!res.success) {
+      alert(res.message || "Failed to apply coupon.");
+      return;
+    }
+
+    const applyObj = { code: found.code, amount: res.amount };
+    setAppliedCoupon(applyObj);
     try {
-      localStorage.setItem(CART_COUPON_KEY, JSON.stringify(apply));
+      localStorage.setItem(CART_COUPON_KEY, JSON.stringify(applyObj));
       window.dispatchEvent(new CustomEvent("coupons-updated", { detail: null }));
     } catch (e) {
       console.error("Failed to save applied coupon", e);
     }
-    alert(`${found.code} applied successfully!`);
+    alert(`${found.code} applied successfully! Discount: &#8377;${res.amount}`);
   };
 
   /* -------------------- CLEAR APPLIED COUPON IF ADMIN REMOVED IT -------------------- */
@@ -254,7 +294,7 @@ export default function Cart() {
 
     const exists = coupons.find((c) => c.code === appliedCoupon.code);
     if (!exists) {
-      const cleared = { code: "NONE", discount: 0 };
+      const cleared = { code: "NONE", amount: 0 };
       setAppliedCoupon(cleared);
       try {
         localStorage.setItem(CART_COUPON_KEY, JSON.stringify(cleared));
@@ -270,7 +310,7 @@ export default function Cart() {
   /* -------------------- CLEAR COUPON IF CART EMPTY -------------------- */
   useEffect(() => {
     if (!cart || cart.length === 0) {
-      const cleared = { code: "NONE", discount: 0 };
+      const cleared = { code: "NONE", amount: 0 };
       setAppliedCoupon(cleared);
       try {
         localStorage.setItem(CART_COUPON_KEY, JSON.stringify(cleared));
@@ -324,7 +364,7 @@ export default function Cart() {
 
                     <Col md={4}>
                       <h5>{item.name}</h5>
-                      <p className="text-muted">₹{item.price}</p>
+                      <p className="text-muted">&#8377;{item.price}</p>
                     </Col>
 
                     <Col md={3} className="d-flex align-items-center">
@@ -334,7 +374,7 @@ export default function Cart() {
                     </Col>
 
                     <Col md={2} className="text-end">
-                      <h6 className="fw-bold">₹{(Number(item.price || 0) * Number(item.qty || 0)).toFixed(0)}</h6>
+                      <h6 className="fw-bold">&#8377;{(Number(item.price || 0) * Number(item.qty || 0)).toFixed(0)}</h6>
                       <Button size="sm" variant="danger" onClick={() => removeItem(item.id)}>
                         <FaTrash />
                       </Button>
@@ -351,19 +391,19 @@ export default function Cart() {
 
                 <div className="d-flex justify-content-between mb-2">
                   <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>&#8377;{subtotal.toFixed(2)}</span>
                 </div>
 
                 <div className="d-flex justify-content-between mb-2">
                   <span>Discount</span>
-                  <span>- ₹{(appliedDiscount || 0).toFixed(2)}</span>
+                  <span>- &#8377;{(appliedDiscount || 0).toFixed(2)}</span>
                 </div>
 
                 <hr />
 
                 <div className="d-flex justify-content-between fw-bold mb-3">
                   <span>Total</span>
-                  <span>₹{total.toFixed(2)}</span>
+                  <span>&#8377;{total.toFixed(2)}</span>
                 </div>
 
                 <Form.Select
@@ -395,7 +435,7 @@ export default function Cart() {
                     })
                   }
                 >
-                  Checkout — Pay ₹{total.toFixed(2)}
+                  Checkout — Pay &#8377;{total.toFixed(2)}
                 </Button>
               </Card>
             </Col>

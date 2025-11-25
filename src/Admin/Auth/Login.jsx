@@ -13,9 +13,7 @@ function AdminLogin() {
     const password = e.target.password.value;
 
     if (email === "admin@gmail.com" && password === "admin123") {
-      // Use a consistent key for protecting admin routes
       localStorage.setItem("adminToken", "demo-admin-token");
-      // Navigate to the admin dashboard route (use replace to avoid back-button going to login)
       navigate("/Admin/dashboard", { replace: true });
     } else {
       alert("❌ Invalid Admin Email or Password");
@@ -38,11 +36,20 @@ function AdminLogin() {
         </Col>
 
         {/* Right Login Section */}
-        <Col md={6} className="d-flex justify-content-center align-items-center bg-gradient">
+        <Col
+          md={6}
+          className="d-flex justify-content-center align-items-center bg-gradient"
+        >
           <Container style={{ maxWidth: "420px" }}>
             <Card className="login-card p-4 border-0 shadow-lg">
               <div className="text-center mb-3">
-                <img src="/images/tastydelight_logo.jpg" alt="logo" width="70" height="70" className="mb-2" />
+                <img
+                  src="/images/tastydelight_logo.jpg"
+                  alt="logo"
+                  width="70"
+                  height="70"
+                  className="mb-2"
+                />
                 <h3 className="fw-bold text-dark">Admin Login</h3>
                 <p className="text-muted small">
                   Welcome back! Please enter your credentials.
@@ -61,7 +68,7 @@ function AdminLogin() {
                   />
                 </Form.Group>
 
-                <Form.Group className="mb-4" controlId="password">
+                <Form.Group className="mb-2" controlId="password">
                   <Form.Label>Password</Form.Label>
                   <Form.Control
                     type="password"
@@ -72,8 +79,19 @@ function AdminLogin() {
                   />
                 </Form.Group>
 
+                {/* Added Credentials Text */}
+                <p className="text-center text-muted small mb-3">
+                  <strong>ID:</strong> admin@gmail.com <br />
+                  <strong>Password:</strong> admin123
+                </p>
+
                 <div className="d-grid">
-                  <Button variant="primary" size="lg" type="submit" className="login-btn">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    type="submit"
+                    className="login-btn"
+                  >
                     Login
                   </Button>
                 </div>

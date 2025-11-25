@@ -27,6 +27,56 @@ function persistCouponsToStorage(list) {
   }
 }
 
+/* -------------------------
+   applyCoupon helper (exported)
+   -------------------------
+   Usage:
+     import CouponsPage, { applyCoupon } from './Coupons.jsx'
+     const result = applyCoupon("WELCOME50", 520)
+     // result = { success: true, amount: 50, newTotal: 470, message: "", coupon: {...} }
+*/
+export function applyCoupon(code, cartTotal) {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    const normalizedCode = (code || "").toString().trim().toUpperCase();
+    const coupon = list.find((c) => (c.code || "").toString().trim().toUpperCase() === normalizedCode);
+
+    if (!coupon) {
+      return { success: false, amount: 0, newTotal: cartTotal, message: "Coupon not found" };
+    }
+    if (coupon.active === false) {
+      return { success: false, amount: 0, newTotal: cartTotal, message: "Coupon is inactive" };
+    }
+
+    const minTotal = Number(coupon.minTotal || 0);
+    if (cartTotal < minTotal) {
+      return { success: false, amount: 0, newTotal: cartTotal, message: `Minimum order value is ₹${minTotal}` };
+    }
+
+    let amount = 0;
+    if (coupon.type === "percent") {
+      // percent discount: discount = X (%) of cartTotal
+      amount = Math.round((Number(coupon.discount || 0) / 100) * cartTotal);
+    } else {
+      // flat discount
+      amount = Number(coupon.discount || 0);
+    }
+
+    // don't allow discount > cartTotal
+    if (amount > cartTotal) amount = cartTotal;
+
+    const newTotal = Math.max(0, Math.round(cartTotal - amount));
+    return { success: true, amount, newTotal, message: "Coupon applied successfully", coupon };
+  } catch (err) {
+    console.error("applyCoupon error", err);
+    return { success: false, amount: 0, newTotal: cartTotal, message: "Failed to apply coupon" };
+  }
+}
+
+/* -------------------------
+   Component: CouponsPage (Admin)
+   ------------------------- */
 export default function CouponsPage() {
   const navigate = useNavigate();
 
@@ -44,6 +94,7 @@ export default function CouponsPage() {
     } catch (e) {
       console.error("Failed to parse existing coupons", e);
     }
+
     const defaults = [
       {
         id: uid(),
@@ -51,7 +102,9 @@ export default function CouponsPage() {
         code: "WELCOME50",
         description: "Get flat ₹50 OFF on your first order!",
         discount: 50,
+        type: "flat",
         minTotal: 0,
+        active: true
       },
       {
         id: uid(),
@@ -59,15 +112,19 @@ export default function CouponsPage() {
         code: "SAVE500",
         description: "Save ₹75 when your order is above ₹500.",
         discount: 75,
+        type: "flat",
         minTotal: 500,
+        active: true
       },
       {
         id: uid(),
-        title: "10% OFF (fixed demo)",
-        code: "TENOFF",
-        description: "Demo 10% (treated as fixed ₹10 in this UI).",
-        discount: 10,
+        title: "Festive 30% Off",
+        code: "FESTIVE30",
+        description: "Enjoy 30% off during festival season.",
+        discount: 30,
+        type: "percent",
         minTotal: 0,
+        active: true
       },
     ];
     // persist defaults immediately so other pages can read them on next mount
@@ -88,20 +145,31 @@ export default function CouponsPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
-  const [formData, setFormData] = useState({ title: "", code: "", description: "", discount: 0, minTotal: 0 });
+  const [formData, setFormData] = useState({
+    title: "",
+    code: "",
+    description: "",
+    discount: 0,
+    minTotal: 0,
+    type: "flat",
+    active: true,
+  });
 
   const openForm = (index = null) => {
     setEditIndex(index);
     if (index !== null) {
+      const c = coupons[index];
       setFormData({
-        title: coupons[index].title || "",
-        code: coupons[index].code || "",
-        description: coupons[index].description || "",
-        discount: Number(coupons[index].discount) || 0,
-        minTotal: Number(coupons[index].minTotal) || 0,
+        title: c.title || "",
+        code: c.code || "",
+        description: c.description || "",
+        discount: Number(c.discount) || 0,
+        minTotal: Number(c.minTotal) || 0,
+        type: c.type || "flat",
+        active: typeof c.active === "boolean" ? c.active : true,
       });
     } else {
-      setFormData({ title: "", code: "", description: "", discount: 0, minTotal: 0 });
+      setFormData({ title: "", code: "", description: "", discount: 0, minTotal: 0, type: "flat", active: true });
     }
     setShowModal(true);
   };
@@ -119,6 +187,8 @@ export default function CouponsPage() {
       description: formData.description,
       discount: Number(formData.discount) || 0,
       minTotal: Number(formData.minTotal) || 0,
+      type: formData.type === "percent" ? "percent" : "flat",
+      active: !!formData.active,
     };
 
     setCoupons((current) => {
@@ -148,9 +218,49 @@ export default function CouponsPage() {
       <Container className="mt-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h2 className="fw-bold">Manage Coupons</h2>
-          <Button variant="primary" onClick={() => openForm()}>
-            + Add Coupon
-          </Button>
+          <div>
+            <Button variant="outline-secondary" className="me-2" onClick={() => {
+              // reset to defaults
+              const defaults = [
+                {
+                  id: uid(),
+                  title: "Welcome Coupon",
+                  code: "WELCOME50",
+                  description: "Get flat ₹50 OFF on your first order!",
+                  discount: 50,
+                  type: "flat",
+                  minTotal: 0,
+                  active: true
+                },
+                {
+                  id: uid(),
+                  title: "₹500+ Purchase Coupon",
+                  code: "SAVE500",
+                  description: "Save ₹75 when your order is above ₹500.",
+                  discount: 75,
+                  type: "flat",
+                  minTotal: 500,
+                  active: true
+                },
+                {
+                  id: uid(),
+                  title: "Festive 30% Off",
+                  code: "FESTIVE30",
+                  description: "Enjoy 30% off during festival season.",
+                  discount: 30,
+                  type: "percent",
+                  minTotal: 0,
+                  active: true
+                },
+              ];
+              setCoupons(defaults);
+              persistCouponsToStorage(defaults);
+            }}>Reset Demo</Button>
+
+            <Button variant="primary" onClick={() => openForm()}>
+              + Add Coupon
+            </Button>
+          </div>
         </div>
 
         <Table bordered hover responsive className="coupon-table">
@@ -160,8 +270,9 @@ export default function CouponsPage() {
               <th>Coupon Title</th>
               <th>Code</th>
               <th>Description</th>
-              <th>Discount (₹)</th>
-              <th>Min Total (₹)</th>
+              <th>Discount</th>
+              <th>Type</th>
+              <th>Min Total (&#8377;)</th>
               <th style={{ width: "160px" }}>Actions</th>
             </tr>
           </thead>
@@ -173,7 +284,10 @@ export default function CouponsPage() {
                 <td>{coupon.title}</td>
                 <td className="fw-bold">{coupon.code}</td>
                 <td>{coupon.description}</td>
-                <td className="text-center">{Number(coupon.discount || 0)}</td>
+                <td className="text-center">
+                  {coupon.type === "percent" ? `${Number(coupon.discount || 0)}%` : `&#8377;${Number(coupon.discount || 0)}`}
+                </td>
+                <td className="text-center">{coupon.type || "flat"}</td>
                 <td className="text-center">{Number(coupon.minTotal || 0)}</td>
                 <td className="text-center">
                   <Button
@@ -236,22 +350,37 @@ export default function CouponsPage() {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>Discount Amount (₹)</Form.Label>
-                <Form.Control
-                  type="number"
-                  min="0"
-                  value={formData.discount}
-                  onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                />
+                <Form.Label>Discount</Form.Label>
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    value={formData.discount}
+                    onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                  />
+                  <Form.Select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} style={{ maxWidth: 160 }}>
+                    <option value="flat">Flat (&#8377;)</option>
+                    <option value="percent">Percent (%)</option>
+                  </Form.Select>
+                </div>
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>Minimum Order (₹) - optional</Form.Label>
+                <Form.Label>Minimum Order (&#8377;) - optional</Form.Label>
                 <Form.Control
                   type="number"
                   min="0"
                   value={formData.minTotal}
                   onChange={(e) => setFormData({ ...formData, minTotal: e.target.value })}
+                />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="checkbox"
+                  label="Active"
+                  checked={!!formData.active}
+                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                 />
               </Form.Group>
             </Form>

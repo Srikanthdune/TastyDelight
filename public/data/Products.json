@@ -1,0 +1,187 @@
+[
+  {
+    "id": "p_st_1",
+    "title": "Starter Item 1",
+    "desc": "Fresh and crispy starter.",
+    "img": "/images/s2.jpg",
+    "price": 140,
+    "original": 180,
+    "category": "Starters",
+    "featured": false
+  },
+  {
+    "id": "p_st_2",
+    "title": "Starter Item 2",
+    "desc": "Crunchy and delicious appetizer.",
+    "img": "/images/s3.jpg",
+    "price": 160,
+    "original": 200,
+    "category": "Starters",
+    "featured": false
+  },
+  {
+    "id": "p_st_3",
+    "title": "Starter Item 3",
+    "desc": "Perfect to kick off your meal.",
+    "img": "/images/s3.jpg",
+    "price": 130,
+    "original": 170,
+    "category": "Starters",
+    "featured": false
+  },
+
+  {
+    "id": "p_pz_1",
+    "title": "Pizza Item 1",
+    "desc": "Cheesy and flavorful pizza.",
+    "img": "/images/p2.jpg",
+    "price": 260,
+    "original": 320,
+    "category": "Pizzas",
+    "featured": true
+  },
+  {
+    "id": "p_pz_2",
+    "title": "Pizza Item 2",
+    "desc": "Loaded with fresh toppings.",
+    "img": "/images/p3.jpg",
+    "price": 280,
+    "original": 340,
+    "category": "Pizzas",
+    "featured": false
+  },
+  {
+    "id": "p_pz_3",
+    "title": "Pizza Item 3",
+    "desc": "Crispy crust and rich cheese.",
+    "img": "/images/p3.jpg",
+    "price": 300,
+    "original": 360,
+    "category": "Pizzas",
+    "featured": false
+  },
+
+  {
+    "id": "p_bg_1",
+    "title": "Burger Item 1",
+    "desc": "Juicy and perfectly grilled.",
+    "img": "/images/burgers.jpg",
+    "price": 150,
+    "original": 190,
+    "category": "Burgers",
+    "featured": true
+  },
+  {
+    "id": "p_bg_2",
+    "title": "Burger Item 2",
+    "desc": "Loaded with crispy veggies.",
+    "img": "/images/bg2.jpg",
+    "price": 170,
+    "original": 210,
+    "category": "Burgers",
+    "featured": false
+  },
+  {
+    "id": "p_bg_3",
+    "title": "Burger Item 3",
+    "desc": "Perfect blend of sauce and patty.",
+    "img": "/images/bg3.jpg",
+    "price": 160,
+    "original": 200,
+    "category": "Burgers",
+    "featured": false
+  },
+
+  {
+    "id": "p_by_1",
+    "title": "Biryani Item 1",
+    "desc": "Aromatic and flavorful biryani.",
+    "img": "/images/b2.jpg",
+    "price": 220,
+    "original": 260,
+    "category": "Biryani",
+    "featured": true
+  },
+  {
+    "id": "p_by_2",
+    "title": "Biryani Item 2",
+    "desc": "Perfectly spiced rice and meat.",
+    "img": "/images/b3.jpg",
+    "price": 200,
+    "original": 240,
+    "category": "Biryani",
+    "featured": false
+  },
+  {
+    "id": "p_by_3",
+    "title": "Biryani Item 3",
+    "desc": "Rich and traditional flavours.",
+    "img": "/images/b4.jpg",
+    "price": 230,
+    "original": 270,
+    "category": "Biryani",
+    "featured": false
+  },
+
+  {
+    "id": "p_ds_1",
+    "title": "Dessert Item 1",
+    "desc": "Sweet and delightful treat.",
+    "img": "/images/d2.jpg",
+    "price": 110,
+    "original": 150,
+    "category": "Desserts",
+    "featured": false
+  },
+  {
+    "id": "p_ds_2",
+    "title": "Dessert Item 2",
+    "desc": "Perfect after-meal sweet.",
+    "img": "/images/d3.jpg",
+    "price": 130,
+    "original": 170,
+    "category": "Desserts",
+    "featured": true
+  },
+  {
+    "id": "p_ds_3",
+    "title": "Dessert Item 3",
+    "desc": "Rich and creamy texture.",
+    "img": "/images/d3.jpg",
+    "price": 120,
+    "original": 160,
+    "category": "Desserts",
+    "featured": false
+  },
+
+  {
+    "id": "p_dr_1",
+    "title": "Drink Item 1",
+    "desc": "Refreshing chilled drink.",
+    "img": "/images/dr2.jpg",
+    "price": 80,
+    "original": 120,
+    "category": "Drinks",
+    "featured": false
+  },
+  {
+    "id": "p_dr_2",
+    "title": "Drink Item 2",
+    "desc": "Cold and energizing beverage.",
+    "img": "/images/dr3.jpg",
+    "price": 90,
+    "original": 130,
+    "category": "Drinks",
+    "featured": false
+  },
+  {
+    "id": "p_dr_3",
+    "title": "Drink Item 3",
+    "desc": "Perfect refreshment for any meal.",
+    "img": "/images/dr4.jpg",
+    "price": 85,
+    "original": 125,
+    "category": "Drinks",
+    "featured": true
+  }
+]

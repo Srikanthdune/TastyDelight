@@ -9,27 +9,22 @@ import "../Styles/UserLogin.modules.css";
 function UserLogin() {
   const navigate = useNavigate();
 
-  // form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); // error message to show in Alert
+  const [error, setError] = useState("");
 
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // expected credentials
     const expectedEmail = "digit@gmail.com";
     const expectedPassword = "1234";
 
     if (email === expectedEmail && password === expectedPassword) {
-      // login success
       localStorage.setItem("isLoggedIn", "true");
       setError("");
-      navigate("/"); // redirect to products after successful login
+      navigate("/");
     } else {
-      // login failed — show alert
-     window.alert("User ID and password is incorrect.");
-
+      window.alert("User ID and password is incorrect.");
     }
   };
 
@@ -45,7 +40,9 @@ function UserLogin() {
         </div>
 
         <h5 className="text-center mb-3 text-primary fw-semibold">Welcome Back 👋</h5>
-        <p className="text-center text-muted small mb-4">Login to your account to order now.</p>
+        <p className="text-center text-muted small mb-4">
+          Login to your account to order now.
+        </p>
 
         {error && (
           <Alert variant="danger" onClose={() => setError("")} dismissible>
@@ -65,7 +62,7 @@ function UserLogin() {
             />
           </Form.Group>
 
-          <Form.Group className="mb-3" controlId="formBasicPassword">
+          <Form.Group className="mb-2" controlId="formBasicPassword">
             <Form.Control
               type="password"
               placeholder="Password"
@@ -75,6 +72,12 @@ function UserLogin() {
               autoComplete="current-password"
             />
           </Form.Group>
+
+          {/* ⭐ Added credentials hint text */}
+          <p className="text-center text-muted small mb-3">
+            <strong>Email:</strong> digit@gmail.com <br />
+            <strong>Password:</strong> 1234
+          </p>
 
           <Button variant="primary" type="submit" className="w-100 mb-4">
             Login
